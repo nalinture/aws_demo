@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="slides-format" content="viewport">
+    <title>Cloud Computing Fundamentals with AWS</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <style type="text/tailwindcss">
+        @theme {
+            --color-bg: #020617;
+            --color-bg-deep: #020617;
+            --color-surface: #0f172a;
+            --color-text: #e5e7eb;
+            --color-text-secondary: #cbd5e1;
+            --color-text-muted: #94a3b8;
+            --color-accent-1: #22c55e;
+            --color-accent-2: #38bdf8;
+            --color-accent-3: #fbbf24;
+            --color-glass-bg: rgba(15,23,42,0.85);
+            --color-glass-border: rgba(148,163,184,0.45);
+            --color-vignette: rgba(0,0,0,0.55);
+            --font-display: 'Instrument Serif', Georgia, serif;
+            --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+    </style>
+
+    <style>
+        :root { --color-bg: #020617; --color-text: #e5e7eb; --glow-color-rgb: 34,197,94; }
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { background: var(--color-bg); margin: 0; }
+        body { font-family: var(--font-body); color: var(--color-text); overflow: hidden; height: 100vh; width: 100vw; }
+        .deck { width: 100vw; height: 100vh; position: relative; }
+        .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at top left,#020617,#020617 40%,#020617 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transform: scale(0.96); transition: opacity 0.7s ease, transform 0.7s ease; pointer-events: none; overflow: hidden; }
+        .slide.active { opacity: 1; transform: scale(1); pointer-events: all; }
+        .slide > .content { position: relative; z-index: 2; width: 100%; max-width: 1120px; padding: clamp(1.5rem,4vw,4rem); }
+        .nav-controls { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; z-index: 100; background: rgba(15,23,42,0.9); backdrop-filter: blur(16px); padding: 8px 22px; border-radius: 999px; border: 1px solid rgba(148,163,184,0.5); box-shadow: 0 18px 45px rgba(15,23,42,0.9); }
+        .nav-btn { width: 38px; height: 38px; border: none; background: rgba(15,23,42,0.9); color: #22c55e; border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.3s, transform 0.2s; box-shadow: 0 0 0 1px rgba(148,163,184,0.4); }
+        .nav-btn:hover { background: rgba(30,64,175,0.9); transform: translateY(-1px); }
+        .slide-dots { display: flex; gap: 7px; }
+        .slide-dots .dot { width: 9px; height: 9px; border-radius: 999px; background: rgba(148,163,184,0.6); cursor: pointer; transition: background 0.3s, transform 0.3s; }
+        .slide-dots .dot.active { background: #22c55e; transform: scale(1.25); box-shadow: 0 0 10px rgba(34,197,94,0.9); }
+        .slide-counter { font-size: 0.8rem; color: #9ca3af; min-width: 44px; text-align: center; }
+        .reveal { opacity: 0; transform: translateY(18px); }
+        @keyframes float-slow { 0%{transform:translate(0,0) scale(1);} 25%{transform:translate(60px,-40px) scale(1.08);} 50%{transform:translate(-40px,40px) scale(0.94);} 75%{transform:translate(40px,10px) scale(1.06);} 100%{transform:translate(0,0) scale(1);} }
+        @keyframes float-drift { 0%{transform:translate(0,0) scale(1) rotate(0deg);} 33%{transform:translate(-40px,-40px) scale(1.12) rotate(2deg);} 66%{transform:translate(30px,30px) scale(0.9) rotate(-2deg);} 100%{transform:translate(0,0) scale(1) rotate(0deg);} }
+        @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-14px);} }
+        .gradient-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.16; animation: float-slow 16s ease-in-out infinite; }
+        .blob:nth-child(2) { animation: float-drift 22s ease-in-out infinite; }
+        .blob:nth-child(3) { animation: float-slow 26s ease-in-out infinite reverse; }
+        .slide::before { content: ''; position: absolute; inset: -60px; z-index: 1; pointer-events: none; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); background-repeat: repeat; background-size: 260px 260px; opacity: 0.04; mix-blend-mode: overlay; }
+        .slide::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse at center, rgba(15,23,42,0) 45%, rgba(0,0,0,0.75) 100%); }
+        .text-glow { text-shadow: 0 0 18px rgba(var(--glow-color-rgb),0.65), 0 0 42px rgba(var(--glow-color-rgb),0.35); }
+        .glass-card { background: rgba(15,23,42,0.7); border-radius: 18px; border: 1px solid rgba(226,232,240,0.82); box-shadow: 0 22px 60px rgba(15,23,42,0.9); }
+        .glass-soft { background: rgba(15,23,42,0.68); border-radius: 16px; border: 1px solid rgba(226,232,240,0.78); box-shadow: 0 18px 40px rgba(15,23,42,0.85); }
+        .glass-chip { background: rgba(15,23,42,0.72); border-radius: 999px; border: 1px solid rgba(226,232,240,0.8); box-shadow: 0 10px 30px rgba(15,23,42,0.85); }
+        .mouse-spotlight { position:fixed; inset:0; z-index:1; pointer-events:none; }
+        .slide-aws-logo { filter: drop-shadow(0 18px 40px rgba(0,0,0,0.9)); }
+        .service-chip { background: rgba(15,23,42,0.92); border-radius: 999px; border: 1px solid rgba(148,163,184,0.5); box-shadow: 0 12px 35px rgba(15,23,42,0.85); }
+        .bar-track { background: rgba(15,23,42,0.9); border-radius: 999px; border: 1px solid rgba(148,163,184,0.5); overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 999px; background-image: linear-gradient(to right,#22c55e,#38bdf8); box-shadow: 0 0 18px rgba(34,197,94,0.7); }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; } }
+    </style>
+</head>
+<body>
+
+<div class="mouse-spotlight"></div>
+
+<div class="deck">
+<div class="slide slide-1 active" data-slide="1">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:520px;height:520px;top:-140px;right:-120px;background:#22c55e;"></div>
+            <div class="blob" style="width:360px;height:360px;bottom:-140px;left:-80px;background:#38bdf8;"></div>
+            <div class="blob" style="width:260px;height:260px;top:45%;left:8%;background:#fbbf24;"></div>
+        </div>
+        <canvas class="particle-canvas" style="position:absolute;inset:0;z-index:1;"></canvas>
+        <div class="content text-center">
+            <div class="inline-flex items-center justify-center gap-3 px-4 py-2 mb-6 glass-chip text-sm text-slate-100">
+                <span class="text-emerald-400 text-base">●</span>
+                <span class="tracking-[0.3em] uppercase text-[0.7rem]"> Cloud Computing Session</span>
+            </div>
+            <h1 class="font-display text-[clamp(2.7rem,5.4vw,4.3rem)] font-black bg-linear-to-br from-emerald-400 via-sky-300 to-emerald-400 bg-clip-text text-transparent tracking-tight mb-4 reveal">
+                Cloud Computing Fundamentals with AWS
+            </h1>
+            <p class="text-[clamp(0.95rem,1.5vw,1.25rem)] text-slate-100 max-w-2xl mx-auto leading-relaxed reveal">
+                Conceptual foundations, cloud service models, and a guided tour of key AWS services for modern distributed systems.
+            </p>
+            <div class="mt-8 flex flex-wrap gap-4 justify-center items-center reveal">
+                
+            </div>
+        </div>
+    </div><div class="slide slide-2" data-slide="2">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-60px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.2vw,3rem)] font-semibold text-emerald-400 mb-2 reveal">Session Roadmap</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-2xl reveal">
+                Designed for  students with programming background. We start with foundations, then move into AWS hands-on concepts and modern tooling.
+            </p>
+            <div class="mt-7 grid grid-cols-2 gap-6 text-sm">
+                <div class="space-y-4">
+                    <div class="flex gap-3 items-start glass-soft px-4 py-3 reveal">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 text-sm font-semibold">01</div>
+                        <div>
+                            <div class="text-slate-50 font-semibold">Intro to Cloud Computing</div>
+                            <div class="text-slate-50 text-xs">What, why now, characteristics, deployment models.</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 items-start glass-soft px-4 py-3 reveal">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 text-sm font-semibold">02</div>
+                        <div>
+                            <div class="text-slate-50 font-semibold">Cloud Service & Deployment Models</div>
+                            <div class="text-slate-50 text-xs">IaaS, PaaS, SaaS; public, private, hybrid, multi-cloud.</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 items-start glass-soft px-4 py-3 reveal">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 text-sm font-semibold">03</div>
+                        <div>
+                            <div class="text-slate-50 font-semibold">Major Cloud Providers</div>
+                            <div class="text-slate-50 text-xs">AWS, Azure, GCP, IBM, Oracle – positioning & strengths.</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 items-start glass-soft px-4 py-3 reveal">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 text-sm font-semibold">04</div>
+                        <div>
+                            <div class="text-slate-50 font-semibold">Break & Q&A</div>
+                            <div class="text-slate-50 text-xs">Clarify concepts before deep diving into AWS.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex gap-3 items-start glass-soft px-4 py-3 reveal">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-full bg-sky-500/20 text-sky-300 text-sm font-semibold">05</div>
+                        <div>
+                            <div class="text-slate-50 font-semibold">AWS Walkthrough</div>
+                            <div class="text-slate-50 text-xs">Console tour, global infrastructure, regions & AZs.</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 items-start glass-soft px-4 py-3 reveal">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-full bg-sky-500/20 text-sky-300 text-sm font-semibold">06</div>
+                        <div>
+                            <div class="text-slate-50 font-semibold">Core AWS Services</div>
+                            <div class="text-slate-50 text-xs">IAM, EC2, S3, Lambda – concepts & demo storyboard.</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 items-start glass-soft px-4 py-3 reveal">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-full bg-sky-500/20 text-sky-300 text-sm font-semibold">07</div>
+                        <div>
+                            <div class="text-slate-50 font-semibold">Terraform & IaC</div>
+                            <div class="text-slate-50 text-xs">Why infrastructure as code, Terraform on AWS.</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 items-start glass-soft px-4 py-3 reveal">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-full bg-sky-500/20 text-sky-300 text-sm font-semibold">08</div>
+                        <div>
+                            <div class="text-slate-50 font-semibold">AI on AWS & Wrap-up</div>
+                            <div class="text-slate-50 text-xs">AI services, typical architectures, learning paths.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-3" data-slide="3">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">What Is Cloud Computing?</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                Cloud computing is the on-demand delivery of computing services—such as servers, storage, databases, networking, software, and analytics—over the internet with pay‑as‑you‑go pricing.
+            </p>
+            <div class="mt-7 grid grid-cols-2 gap-6 text-sm">
+                <div class="space-y-4">
+                    <div class="glass-soft px-4 py-3 reveal">
+                        <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Key characteristics</div>
+                        <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                            <li>On-demand self-service – provision resources in minutes from a console or API.</li>
+                            <li>Broad network access – available over the internet from many device types.</li>
+                            <li>Resource pooling – shared multi-tenant infrastructure with isolation.</li>
+                            <li>Rapid elasticity – scale up and down with demand instead of fixed capacity.</li>
+                            <li>Measured service – pay only for what you use, with fine‑grained metering.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="glass-soft px-4 py-3 reveal">
+                        <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">From data centers to cloud</div>
+                        <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                            <li>Traditional on‑premises: upfront CapEx, manual provisioning, long procurement cycles.</li>
+                            <li>Cloud: shift to OpEx, API‑driven provisioning, global reach in minutes.</li>
+                            <li>Abstracts hardware; lets teams focus on architectures, data, and applications.</li>
+                        </ul>
+                    </div>
+                    <div class="glass-soft px-4 py-3 reveal">
+                        <div class="text-xs tracking-[0.24em] uppercase text-amber-300/90 mb-1">For  students</div>
+                        <p class="text-slate-100 text-[0.9rem]">
+                            Think of the cloud as programmable infrastructure: every server, network, and storage system becomes an API you can script, automate, and compose into resilient distributed systems.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-4" data-slide="4">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">Why Do We Need Cloud Computing?</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                Beyond buzzwords, the cloud changes how we design, build, and operate software systems, especially at scale.
+            </p>
+            <div class="mt-7 grid grid-cols-3 gap-5 text-sm">
+                <div class="glass-soft px-4 py-4 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Agility & speed</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Provision experiments in minutes instead of waiting weeks for hardware.</li>
+                        <li>Iterate on architectures quickly; tear down when not needed.</li>
+                        <li>Supports DevOps, CI/CD, and rapid innovation cycles.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">Scalability & reliability</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Scale from a few users to millions without redesigning hardware.</li>
+                        <li>Leverage managed services with built‑in high availability and SLAs.</li>
+                        <li>Global infrastructure enables low‑latency, multi‑region deployments.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-amber-300/90 mb-1">Cost & focus</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Move from capital expenditure to usage‑based operating expenditure.</li>
+                        <li>Avoid undifferentiated heavy lifting: power, cooling, racking, patching.</li>
+                        <li>Focus student projects on design, data, and algorithms—not hardware logistics.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-5" data-slide="5">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">Cloud Deployment Models</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                How infrastructure is owned and exposed drives security, control, and scalability trade‑offs.
+            </p>
+            <div class="mt-7 grid grid-cols-2 gap-6 text-sm">
+                <div class="space-y-4">
+                    <div class="glass-soft px-4 py-4 reveal">
+                        <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Public cloud</div>
+                        <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                            <li>Shared infrastructure operated by providers like AWS, Azure, GCP.</li>
+                            <li>Elastic capacity, global reach, rich managed services.</li>
+                            <li>Typical choice for startups, web apps, analytics, and experimentation.</li>
+                        </ul>
+                    </div>
+                    <div class="glass-soft px-4 py-4 reveal">
+                        <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">Private cloud</div>
+                        <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                            <li>Cloud principles applied inside a single organization.</li>
+                            <li>More control, customized security; higher management overhead.</li>
+                            <li>Often built with OpenStack, VMware, or on‑premises AWS/Azure stacks.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="glass-soft px-4 py-4 reveal">
+                        <div class="text-xs tracking-[0.24em] uppercase text-amber-300/90 mb-1">Hybrid cloud</div>
+                        <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                            <li>Combines on‑premises and public cloud resources.</li>
+                            <li>Useful for gradual migrations, data residency, or legacy systems.</li>
+                            <li>Requires robust networking, identity, and governance patterns.</li>
+                        </ul>
+                    </div>
+                    <div class="glass-soft px-4 py-4 reveal">
+                        <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">Multi‑cloud</div>
+                        <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                            <li>Uses services from multiple public cloud providers.</li>
+                            <li>Can reduce vendor lock‑in or optimize for specific capabilities.</li>
+                            <li>Increases complexity in architecture, operations, and skills.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-6" data-slide="6">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">Cloud Service Models</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                Service models define how much of the stack you manage versus the provider.
+            </p>
+            <div class="mt-7 grid grid-cols-2 gap-6 text-sm">
+                <div class="space-y-4">
+                    <div class="glass-soft px-4 py-4 reveal">
+                        <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Infrastructure as a Service (IaaS)</div>
+                        <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                            <li>Virtual machines, storage, and networking exposed as APIs.</li>
+                            <li>You manage OS, runtime, data, and applications.</li>
+                            <li>Examples: AWS EC2, EBS, VPC, Azure VMs, GCP Compute Engine.</li>
+                        </ul>
+                    </div>
+                    <div class="glass-soft px-4 py-4 reveal">
+                        <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">Platform as a Service (PaaS)</div>
+                        <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                            <li>Managed runtimes and databases; deploy code, not servers.</li>
+                            <li>Provider handles OS, patching, scaling, and high availability.</li>
+                            <li>Examples: AWS Elastic Beanstalk, AWS Lambda, RDS, Azure App Service.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="glass-soft px-4 py-4 reveal">
+                        <div class="text-xs tracking-[0.24em] uppercase text-amber-300/90 mb-1">Software as a Service (SaaS)</div>
+                        <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                            <li>Complete applications delivered over the internet.</li>
+                            <li>Users configure and consume; provider manages everything else.</li>
+                            <li>Examples: Gmail, Salesforce, Office 365, many AI‑powered SaaS tools.</li>
+                        </ul>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-7" data-slide="7">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">Major Cloud Providers</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                A few hyperscale providers dominate the global cloud market, each with strengths and ecosystems.
+            </p>
+            <div class="mt-7 grid grid-cols-3 gap-6 items-stretch text-xs">
+                <div class="glass-soft px-4 py-4 flex flex-col items-center justify-center gap-3 reveal">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS Logo" class="h-10 max-w-full object-contain slide-aws-logo">
+                    <div class="text-slate-50 text-sm font-semibold">Amazon Web Services (AWS)</div>
+                    <div class="text-slate-50 text-[0.8rem] text-center">Market leader with the broadest set of services and global regions.</div>
+                </div>
+                <div class="glass-soft px-4 py-4 flex flex-col items-center justify-center gap-3 reveal">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a8/Microsoft_Azure_Logo.svg" alt="Azure Logo" class="h-10 max-w-full object-contain">
+                    <div class="text-slate-50 text-sm font-semibold">Microsoft Azure</div>
+                    <div class="text-slate-50 text-[0.8rem] text-center">Strong enterprise integration with Microsoft stack and hybrid offerings.</div>
+                </div>
+                <div class="glass-soft px-4 py-4 flex flex-col items-center justify-center gap-3 reveal">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg" alt="Google Cloud Logo" class="h-10 max-w-full object-contain">
+                    <div class="text-slate-50 text-sm font-semibold">Google Cloud Platform</div>
+                    <div class="text-slate-50 text-[0.8rem] text-center">Known for data analytics, Kubernetes, and AI/ML tooling.</div>
+                </div>
+            </div>
+            <div class="mt-5 grid grid-cols-2 gap-5 text-xs">
+                <div class="glass-soft px-4 py-3 flex items-center gap-3 reveal">
+                    <span class="text-[1.4rem]">💼</span>
+                    <div>
+                        <div class="text-slate-50 text-sm font-semibold">IBM Cloud</div>
+                        <div class="text-slate-50 text-[0.8rem]">Focus on hybrid cloud, mainframes, and regulated industries.</div>
+                    </div>
+                </div>
+                <div class="glass-soft px-4 py-3 flex items-center gap-3 reveal">
+                    <span class="text-[1.4rem]">🏛️</span>
+                    <div>
+                        <div class="text-slate-50 text-sm font-semibold">Oracle Cloud Infrastructure</div>
+                        <div class="text-slate-50 text-[0.8rem]">Optimized for Oracle databases and enterprise workloads.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-8" data-slide="8">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">Why This Course Focuses on AWS</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                AWS is a practical choice for learning because concepts transfer to other clouds while giving you access to a very rich ecosystem.
+            </p>
+            <div class="mt-7 grid grid-cols-3 gap-5 text-sm">
+                <div class="glass-soft px-4 py-4 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Industry adoption</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>One of the most widely used public clouds globally.[web:6]</li>
+                        <li>Strong presence in startups, enterprises, and research projects.</li>
+                        <li>Large community, documentation, and certification ecosystem.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">Breadth of services</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Over 200 fully featured services spanning compute, storage, data, AI, security.[web:6]</li>
+                        <li>Core services like EC2, S3, RDS, and Lambda underpin many architectures.[web:3][web:9]</li>
+                        <li>Good platform to practice integrating multiple managed services.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-amber-300/90 mb-1">Transferable skills</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Concepts like VMs, object storage, IAM, and serverless are common across clouds.[web:2][web:5]</li>
+                        <li>Terraform modules let you reuse patterns across AWS, Azure, GCP.</li>
+                        <li>AWS labs give you hands‑on practice with production‑grade tools.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-9" data-slide="9">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">AWS at a Glance</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                We will briefly tour the AWS Management Console and map its structure to core architectural concepts.
+            </p>
+            <div class="mt-7 grid grid-cols-2 gap-6 text-sm">
+                <div class="glass-soft px-4 py-4 space-y-2 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Global infrastructure concepts</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li><span class="font-semibold">Regions</span> – separate geographic areas (e.g., ap-south-1).</li>
+                        <li><span class="font-semibold">Availability Zones</span> – isolated data centers within a region for high availability.</li>
+                        <li><span class="font-semibold">Edge locations</span> – global points of presence for caching and content delivery.</li>
+                        <li>Designing for reliability means using multiple AZs and sometimes multi‑region.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 space-y-3 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">Console walkthrough (demo script)</div>
+                    <ol class="list-decimal list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Sign in to AWS console; show region selector and search bar.</li>
+                        <li>Navigate to IAM, EC2, S3, Lambda dashboards to show service tiles.</li>
+                        <li>Highlight "Services" and "Recently visited" for quick navigation.</li>
+                        <li>Show account details, billing, and support menus (without exposing secrets).</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-10" data-slide="10">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">AWS Identity and Access Management (IAM)</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                IAM controls who can do what on which AWS resources. It is foundational for any serious AWS usage.[web:15]
+            </p>
+            <div class="mt-7 grid grid-cols-2 gap-6 text-sm">
+                <div class="glass-soft px-4 py-4 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Core IAM concepts</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li><span class="font-semibold">Users</span> – long‑lived identities for people or applications.</li>
+                        <li><span class="font-semibold">Groups</span> – collections of users sharing policies.</li>
+                        <li><span class="font-semibold">Roles</span> – identities assumed by AWS services or external identities.</li>
+                        <li><span class="font-semibold">Policies</span> – JSON documents that define allowed or denied actions.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">Demo storyboard: IAM</div>
+                    <ol class="list-decimal list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Open IAM in console; show users, roles, and policies sections.</li>
+                        <li>Create a demo IAM user with programmatic access and limited S3 permissions.</li>
+                        <li>Attach a managed policy (e.g., AmazonS3ReadOnlyAccess) and explain least privilege.</li>
+                        <li>Highlight CloudShell / AWS CLI usage with IAM credentials (conceptually; avoid exposing secrets).</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-11" data-slide="11">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">Amazon EC2 – Virtual Servers in the Cloud</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                EC2 lets you launch and manage virtual machines with different CPU, memory, and storage characteristics.[web:3][web:6][web:9]
+            </p>
+            <div class="mt-7 grid grid-cols-2 gap-6 text-sm">
+                <div class="glass-soft px-4 py-4 space-y-2 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Concepts</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Instance types (t3.micro, m5.large, etc.) optimized for general, compute, memory, or GPU workloads.</li>
+                        <li>AMI (Amazon Machine Image) defines OS and base software.</li>
+                        <li>Key pairs for SSH access; security groups as virtual firewalls.</li>
+                        <li>EC2 integrates with EBS volumes, IAM roles, and VPC networking.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 space-y-2 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">Demo storyboard: EC2</div>
+                    <ol class="list-decimal list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>From console, navigate to EC2 and show dashboard metrics.</li>
+                        <li>Launch a small Linux instance (e.g., t2.micro) in a public subnet.</li>
+                        <li>Explain security group inbound rules (SSH/HTTP) and key pair usage.</li>
+                        <li>Optionally SSH in and deploy a simple web server or API.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-12" data-slide="12">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">Amazon S3 – Object Storage</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                S3 provides virtually unlimited, highly durable object storage for files, backups, data lakes, and static websites.[web:3][web:6][web:9]
+            </p>
+            <div class="mt-7 grid grid-cols-2 gap-6 text-sm">
+                <div class="glass-soft px-4 py-4 space-y-2 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Concepts</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Data stored as <span class="font-semibold">objects</span> inside <span class="font-semibold">buckets</span> with globally unique names.</li>
+                        <li>Designed for eleven 9s (99.999999999%) of durability.[web:9]</li>
+                        <li>Multiple storage classes (Standard, Infrequent Access, Glacier) for cost optimization.</li>
+                        <li>Fine‑grained access control using IAM policies and bucket policies.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 space-y-2 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">Demo storyboard: S3</div>
+                    <ol class="list-decimal list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Create a bucket with a region‑specific name.</li>
+                        <li>Upload sample files (images, JSON, logs) via console.</li>
+                        <li>Show object URL patterns and basic access control options.</li>
+                        <li>Optionally enable static website hosting and access via browser.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-13" data-slide="13">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">AWS Lambda – Serverless Functions</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                Lambda lets you run code without provisioning or managing servers. You pay only for compute time consumed.[web:3][web:6][web:9]
+            </p>
+            <div class="mt-7 grid grid-cols-2 gap-6 text-sm">
+                <div class="glass-soft px-4 py-4 space-y-2 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Concepts</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Event‑driven: triggered by S3 uploads, API Gateway, queues, or schedules.</li>
+                        <li>Supports multiple runtimes (Node.js, Python, Java, etc.).</li>
+                        <li>Scales automatically with the number of events.</li>
+                        <li>Integrates with IAM, VPC, and other AWS services.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 space-y-2 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">Demo storyboard: Lambda</div>
+                    <ol class="list-decimal list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Create a simple Lambda function (e.g., Node.js or Python) via console editor.</li>
+                        <li>Use a basic handler that logs the event and returns a JSON response.</li>
+                        <li>Invoke it from the console and show logs in Amazon CloudWatch.</li>
+                        <li>Optionally trigger it from S3 or an HTTP endpoint (API Gateway).</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-14" data-slide="14">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">Terraform & Infrastructure as Code</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                Terraform lets you describe cloud infrastructure in declarative configuration files and provision it consistently across environments.
+            </p>
+            <div class="mt-7 grid grid-cols-2 gap-6 text-sm">
+                <div class="glass-soft px-4 py-4 space-y-2 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Why IaC?</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Version‑control infrastructure alongside application code.</li>
+                        <li>Repeatable, documented environments for dev, test, and production.</li>
+                        <li>Automated provisioning and teardown reduces human error.</li>
+                        <li>Enables review, collaboration, and testing of infrastructure changes.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 space-y-2 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">Terraform on AWS – demo storyboard</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Write a minimal Terraform configuration that creates an S3 bucket or EC2 instance.</li>
+                        <li>Run <span class="font-mono text-[0.8rem]">terraform init</span>, <span class="font-mono text-[0.8rem]">plan</span>, and <span class="font-mono text-[0.8rem]">apply</span> to provision resources.</li>
+                        <li>Show how state tracks infrastructure and how <span class="font-mono text-[0.8rem]">destroy</span> cleans it up.</li>
+                        <li>Discuss modules and reusable patterns for larger systems.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div><div class="slide slide-15" data-slide="15">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">AI & ML on AWS – Typical Use Cases</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">
+                AWS provides both pre‑built AI services and flexible ML platforms to integrate intelligence into applications.
+            </p>
+            <div class="mt-7 grid grid-cols-3 gap-5 text-sm">
+                <div class="glass-soft px-4 py-4 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Managed ML platform</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Amazon SageMaker for building, training, and deploying ML models at scale.</li>
+                        <li>Supports Jupyter notebooks, distributed training, and managed endpoints.</li>
+                        <li>Useful for research projects and custom ML workflows.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">Pre‑built AI APIs</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Services for vision, speech, text, personalization, and forecasting.</li>
+                        <li>Integrate AI without training models from scratch.</li>
+                        <li>Combine with Lambda, S3, and API Gateway for full workflows.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-amber-300/90 mb-1">Example projects for students</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Serverless image classifier using S3, Lambda, and an AI API.</li>
+                        <li>Chat or Q&amp;A interface backed by vector search and AI services.</li>
+                        <li>Analytics pipeline from data ingestion to dashboards with embedded ML.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide slide-17" data-slide="17">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:420px;height:420px;top:-120px;right:-80px;background:#22c55e;"></div>
+            <div class="blob" style="width:260px;height:260px;bottom:-120px;left:-40px;background:#38bdf8;"></div>
+        </div>
+        <div class="content">
+            <h2 class="font-display text-[clamp(2.1rem,4.1vw,3rem)] font-semibold text-emerald-400 mb-3 reveal">Next Steps with AWS Training & Certification</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-3xl reveal">All of the resources below are official AWS offerings that students can access for free to continue learning.[web:19][web:21][web:29][web:25]</p>
+            <div class="mt-7 grid grid-cols-2 gap-6 text-sm">
+                <div class="space-y-4">
+                    <div class="glass-soft px-4 py-4 reveal">
+                        <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Free AWS digital training</div>
+                        <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                            <li><span class="font-semibold">AWS Skill Builder</span> – 500+ free, self-paced cloud courses and learning plans. Visit: <span class="underline">https://explore.skillbuilder.aws</span></li>
+                            <li><span class="font-semibold">AWS Cloud Practitioner Essentials</span> – official introductory course for cloud fundamentals and the Cloud Practitioner exam. See: <span class="underline">https://aws.amazon.com/training/digital/aws-cloud-practitioner-essentials/</span></li>
+                            <li><span class="font-semibold">AWS Cloud Quest & SimuLearn</span> – game-based and hands-on lab learning paths for beginners.[web:29]</li>
+                            <li>Students can create a free AWS Training account and track progress across all of these resources.[web:19][web:22]</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="glass-soft px-4 py-4 reveal">
+                        <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">AWS certification paths (high level)</div>
+                        <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                            <li><span class="font-semibold">Foundational</span> – AWS Certified Cloud Practitioner (good starting point for students).[web:21][web:29]</li>
+                            <li><span class="font-semibold">Associate</span> – Solutions Architect, Developer, and CloudOps Engineer (formerly SysOps) for deeper technical roles.[web:21][web:30]</li>
+                            <li><span class="font-semibold">Professional</span> – Solutions Architect Professional and DevOps Engineer Professional for advanced, multi-year AWS experience.[web:21][web:30]</li>
+                            <li><span class="font-semibold">Specialty</span> – Security, Data/Analytics, Machine Learning, Networking, and other focused domains.[web:21][web:33]</li>
+                            <li>Full details and latest exam list: <span class="underline">https://aws.amazon.com/certification/</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<div class="slide slide-16" data-slide="16">
+        <div class="gradient-mesh">
+            <div class="blob" style="width:520px;height:520px;top:-140px;right:-120px;background:#22c55e;"></div>
+            <div class="blob" style="width:360px;height:360px;bottom:-140px;left:-80px;background:#38bdf8;"></div>
+            <div class="blob" style="width:260px;height:260px;top:45%;left:8%;background:#fbbf24;"></div>
+        </div>
+        <canvas class="particle-canvas" style="position:absolute;inset:0;z-index:1;"></canvas>
+        <div class="content text-center">
+            <h2 class="font-display text-[clamp(2.4rem,4.8vw,3.6rem)] font-semibold text-emerald-400 mb-4 reveal">Wrapping Up</h2>
+            <p class="text-slate-100 text-[0.98rem] max-w-2xl mx-auto mb-6 reveal">
+                You now have a mental model for cloud computing, core AWS services, Terraform‑style infrastructure as code, and where AI fits into modern cloud architectures.
+            </p>
+            <div class="grid grid-cols-3 gap-5 max-w-4xl mx-auto text-sm mb-7">
+                <div class="glass-soft px-4 py-4 text-left reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-emerald-300/90 mb-1">Concepts</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Cloud fundamentals: deployment and service models.</li>
+                        <li>How cloud changes architecture, cost, and operations.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 text-left reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-sky-300/90 mb-1">AWS skills</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Console orientation and core services (IAM, EC2, S3, Lambda).</li>
+                        <li>How to structure demos and small hands‑on labs.</li>
+                    </ul>
+                </div>
+                <div class="glass-soft px-4 py-4 text-left reveal">
+                    <div class="text-xs tracking-[0.24em] uppercase text-amber-300/90 mb-1">Next steps</div>
+                    <ul class="list-disc list-inside text-slate-100 text-[0.9rem] space-y-1.5">
+                        <li>Try AWS free‑tier labs or classroom accounts.</li>
+                        <li>Build a mini project combining EC2/S3/Lambda and AI.</li>
+                        <li>Explore certifications (Cloud Practitioner, Solutions Architect – Associate).</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-4 reveal">
+                <div class="glass-chip inline-flex items-center gap-3 px-4 py-2 text-xs tracking-[0.24em] uppercase text-slate-100/90">
+                    <span>Questions · Discussion · Live Design of a Cloud Architecture</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div></div>
+
+<div class="nav-controls">
+    <button class="nav-btn" onclick="changeSlide(-1)">&#8249;</button>
+    <div class="slide-dots" id="dots"></div>
+    <button class="nav-btn" onclick="changeSlide(1)">&#8250;</button>
+    <span class="slide-counter" id="counter">1 / 17</span>
+</div>
+
+<script>
+    let current = 1;
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    const dotsContainer = document.getElementById('dots');
+    const counter = document.getElementById('counter');
+
+    for (let i = 1; i <= total; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot' + (i === 1 ? ' active' : '');
+        dot.onclick = () => goToSlide(i);
+        dotsContainer.appendChild(dot);
+    }
+
+    function goToSlide(n) {
+        const prev = document.querySelector('.slide.active');
+        const next = document.querySelector('.slide[data-slide="' + n + '"]');
+        if (prev) prev.classList.remove('active');
+        if (next) {
+            next.classList.add('active');
+            animateSlide(next);
+        }
+        current = n;
+        updateNav();
+    }
+
+    function changeSlide(dir) {
+        let next = current + dir;
+        if (next < 1) next = total;
+        if (next > total) next = 1;
+        goToSlide(next);
+    }
+
+    function updateNav() {
+        document.querySelectorAll('.dot').forEach((d, i) => {
+            d.classList.toggle('active', i + 1 === current);
+        });
+        counter.textContent = current + ' / ' + total;
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === ' ') {
+            e.preventDefault();
+            changeSlide(1);
+        }
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            changeSlide(-1);
+        }
+    });
+
+    let touchStartX = 0;
+    document.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+    });
+    document.addEventListener('touchend', (e) => {
+        const diff = touchStartX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 50) changeSlide(diff > 0 ? 1 : -1);
+    });
+
+    function animateSlide(slide) {
+        slide.querySelectorAll('.reveal').forEach((el, i) => {
+            el.style.transition = 'none';
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(18px)';
+            el.offsetHeight;
+            const delay = i * 0.08;
+            el.style.transition = 'opacity 0.38s ease ' + delay + 's, transform 0.38s ease ' + delay + 's';
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        });
+        animateSlideEffects(slide);
+    }
+
+    function animateSlideEffects(slide) {
+        slide.querySelectorAll('.bar-fill:not(.fill-init)').forEach((bar, i) => {
+            bar.classList.add('fill-init');
+            bar.style.width = '0%';
+            bar.style.transition = 'width 0.6s ease ' + (i * 0.08) + 's';
+            bar.offsetHeight;
+            bar.style.width = bar.dataset.width + '%';
+        });
+    }
+
+    document.addEventListener('mousemove', (e) => {
+        const spotlight = document.querySelector('.mouse-spotlight');
+        if (spotlight) {
+            const rgb = getComputedStyle(document.documentElement).getPropertyValue('--glow-color-rgb').trim() || '34,197,94';
+            spotlight.style.background = 'radial-gradient(520px circle at ' + e.clientX + 'px ' + e.clientY + 'px, rgba(' + rgb + ',0.12), transparent 52%)';
+        }
+    });
+
+    window.initParticles = function(canvas, options) {
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        const interactive = options.interactive !== false;
+        const count = options.count || (interactive ? 55 : 18);
+        let mx = -1000, my = -1000;
+        const rgb = getComputedStyle(document.documentElement).getPropertyValue('--glow-color-rgb').trim() || '34,197,94';
+        const parts = rgb.split(',').map(Number);
+        const particles = Array.from({ length: count }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.35,
+            vy: (Math.random() - 0.5) * 0.35,
+            size: Math.random() * 2.6 + 0.9,
+            alpha: Math.random() * 0.35 + 0.1
+        }));
+
+        if (interactive) {
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                mx = e.clientX - rect.left;
+                my = e.clientY - rect.top;
+            });
+            canvas.addEventListener('mouseleave', () => {
+                mx = -1000;
+                my = -1000;
+            });
+        }
+
+        (function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                if (interactive) {
+                    const dx = p.x - mx;
+                    const dy = p.y - my;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 130) {
+                        const force = (130 - dist) / 130 * 2;
+                        p.vx += (dx / dist) * force * 0.12;
+                        p.vy += (dy / dist) * force * 0.12;
+                    }
+                }
+                p.vx *= 0.98;
+                p.vy *= 0.98;
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0) p.x = canvas.width;
+                if (p.x > canvas.width) p.x = 0;
+                if (p.y < 0) p.y = canvas.height;
+                if (p.y > canvas.height) p.y = 0;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(' + parts[0] + ',' + parts[1] + ',' + parts[2] + ',' + p.alpha + ')';
+                ctx.fill();
+            });
+            requestAnimationFrame(animate);
+        })();
+    };
+
+    document.querySelectorAll('.particle-canvas').forEach(c => window.initParticles(c, { interactive: true, count: 55 }));
+
+    try { animateSlide(document.querySelector('.slide.active')); } catch (e) { console.warn('Initial animation error:', e); }
+</script>
+
+</body>
+</html>
