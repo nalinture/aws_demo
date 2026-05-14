@@ -1,15 +1,6 @@
-import streamlit as st
-from transformers import pipeline
+def lambda_handler(event, context):
 
-st.title("AI Demo using AWS + Hugging Face")
-
-classifier = pipeline(
-    "sentiment-analysis",
-    model="distilbert-base-uncased-finetuned-sst-2-english"
-)
-
-text = st.text_input("Enter text")
-
-if text:
-    result = classifier(text)
-    st.write(result)
+    return {
+        'statusCode': 200,
+        'body': 'Hello Students!'
+    }
