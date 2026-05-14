@@ -35,4 +35,32 @@ HTTP (80)
 Custom TCP (8501 for Streamlit)
 
 Part 2
-Connect to EC
+Connect to EC and install python
+
+ssh -i demo-key.pem ubuntu@<EC2-PUBLIC-IP>
+
+Update pacakges:
+sudo apt update
+
+Install python:
+sudo apt install python3-pip -y
+
+virtual environment creation:
+sudo apt install python3-venv -y
+
+moving python to venv:
+python3 -m venv myenv
+
+activate the source: ( if disconnected during the session, use this command after ssh connect)
+source myenv/bin/activate
+
+part 3
+install dependencies:
+transformers - ???
+torch - 
+streamlit -
+
+pip install transformers torch streamlit
+
+
+
